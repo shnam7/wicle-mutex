@@ -1,0 +1,23 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "display": "Default",
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "declaration": true,
+        "declarationMap": false,
+        "esModuleInterop": true,
+        "incremental": false,
+        "isolatedModules": true,
+        "moduleDetection": "force",
+        "noUncheckedIndexedAccess": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "noEmitOnError": true,
+        "noImplicitAny": true,
+        "strict": true
+    },
+
+    "exclude": ["node_modules", "dist"]
+}
