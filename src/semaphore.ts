@@ -1,10 +1,10 @@
 // ref: https://github.com/pbardov/es6-mutex
 
 export class Semaphore {
-    protected _waitQ: (() => void)[] = []
-    protected _value: number = 0 // # of currently allowed accesses
+    protected _waitQ: Array<() => void> = []
+    protected _value = 0 // # of currently allowed accesses
 
-    constructor(value: number = 0) {
+    constructor(value = 0) {
         this._value = value
     }
 
@@ -17,7 +17,7 @@ export class Semaphore {
     async wait(): Promise<void> {
         if (this._value > 0) {
             --this._value
-            return Promise.resolve()
+            return
         }
 
         return new Promise<void>(resolve => {
@@ -82,6 +82,6 @@ export class Semaphore {
      * Alias to sem.post().
      */
     release(): void {
-        return this.post()
+        this.post();
     }
 }

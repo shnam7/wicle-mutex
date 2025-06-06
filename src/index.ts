@@ -1,4 +1,3 @@
-export { Semaphore } from './semaphore.js'
-import { Mutex } from './mutex.js'
+export {Semaphore} from './semaphore.js';
 
-export { Mutex, Mutex as default }
+export {Mutex as default, Mutex} from './mutex.js';

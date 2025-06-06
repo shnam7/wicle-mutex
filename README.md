@@ -130,4 +130,4 @@ Unlock the exclusive resource.
 
 
 ## License
-MIT - Copyright © 2024 Robin Nam
+Copyright© 2024, Under MIT

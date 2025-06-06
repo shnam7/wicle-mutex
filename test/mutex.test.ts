@@ -1,8 +1,8 @@
+import crypto from 'node:crypto'
 import { describe, expect, it, test } from 'vitest'
 import { Mutex } from '../src/index.js'
-import crypto from 'node:crypto'
 
-export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+export const delay = async (ms: number) => new Promise(resolve => {setTimeout(resolve, ms)})
 
 /**
  * Critical section test
@@ -20,15 +20,17 @@ const critical_section_test = async ({ useMutex = false } = {}) => {
     const thread = async () => {
         await mutex?.lock()
         ++threads_in_crit_section
-        if (threads_in_crit_section != 1) ++collision_count
+        if (threads_in_crit_section !== 1) ++collision_count
         await delay(Math.random() * 10) // give a chance to other thread to increment critAccess
         --threads_in_crit_section
         mutex?.unlock()
     }
-    const threads: Promise<unknown>[] = []
+
+    const threads: Array<Promise<unknown>> = []
     for (let i = 0; i < 100; ++i) {
         threads.push(thread())
     }
+
     await Promise.all(threads)
     // console.log(`collisions=${collision_count}`)
     return collision_count === 0 // there should have been no collision
@@ -56,7 +58,7 @@ describe.concurrent('Mutex', () => {
 
     describe('Concurrent shared memory acess test', async () => {
         const mtx = new Mutex()
-        let shared_mem: string | null = null
+        let shared_mem: string | undefined
         const _thread = async (msg: string): Promise<string> => {
             await mtx.lock()
             shared_mem = msg // write message to shared memory
@@ -71,20 +73,23 @@ describe.concurrent('Mutex', () => {
         for (let n = 0; n < 100; ++n) {
             msg_sent.push(crypto.randomBytes(4).toString('hex'))
         }
-        const msg_promises: Promise<string>[] = []
-        msg_sent.forEach((v: string) => {
-            msg_promises.push(_thread(v))
-        })
+
+        const msg_promises: Array<Promise<string>> = []
+        for (const msg of msg_sent) {
+            msg_promises.push(_thread(msg))
+        }
+
         const res = await Promise.all(msg_promises)
 
-        for (let n = 0; n < res.length; ++n) {
-            it(`${n} ${res[n]} is not in sent message list.`, () => {
-                expect(msg_sent.includes(res[n] as string)).toBeTruthy()
+        for (const [n, re] of res.entries()) {
+            it(`${n} ${re} is not in sent message list.`, () => {
+                expect(msg_sent.includes(re)).toBeTruthy()
             })
         }
-        for (let n = 0; n < msg_sent.length; ++n) {
-            it(`${n} ${msg_sent[n]} is not in received message list.`, () => {
-                expect(res.includes(msg_sent[n] as string)).toBeTruthy()
+
+        for (const [n, element] of msg_sent.entries()) {
+            it(`${n} ${element} is not in received message list.`, () => {
+                expect(res.includes(element)).toBeTruthy()
             })
         }
     })

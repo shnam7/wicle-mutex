@@ -13,6 +13,6 @@ mtx.lock().then(() => {
 
 console.log('Access crit data #2')
 mtx.lock().then(() => {
-    console.log('crit_data = ', crit_data)
+    console.log('crit_data =', crit_data)
     mtx.unlock()
 })

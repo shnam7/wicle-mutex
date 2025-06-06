@@ -11,7 +11,7 @@ import { Semaphore } from '../src/index.js'
 export const producer_consumer = async ({ max_produce = 100, handshake = false } = {}): Promise<boolean> => {
     let consumer_sum = 0
     let expected_sum = 0
-    let shared_mem: number = 0
+    let shared_mem = 0
     const sem_reader = handshake ? new Semaphore(0) : undefined
     const sem_writer = handshake ? new Semaphore(0) : undefined
 
@@ -23,6 +23,7 @@ export const producer_consumer = async ({ max_produce = 100, handshake = false }
             expected_sum += count
             // console.log(`producer count=${count} sent_val=${shared_mem} expected_sum=${expected_sum}`)
             sem_writer?.post() // signal to reader that write is done
+            // eslint-disable-next-line no-await-in-loop
             await sem_reader?.wait() // wait for the reader to process
         }
         // console.log('Producer finished.')
@@ -32,6 +33,7 @@ export const producer_consumer = async ({ max_produce = 100, handshake = false }
         // console.log('Consumer started.')
         let count = 0
         while (++count <= max_produce) {
+            // eslint-disable-next-line no-await-in-loop
             await sem_writer?.wait() // wait for the writer to process
             consumer_sum += shared_mem
             // console.log(`consumer count=${count} rcvd_val=${shared_mem} consumer_sum=${consumer_sum}`)

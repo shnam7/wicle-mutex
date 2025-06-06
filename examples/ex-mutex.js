@@ -12,5 +12,5 @@ setTimeout(() => {
 
 console.log('Access crit data #2')
 await mtx.lock()
-console.log('crit_data = ', crit_data)
+console.log('crit_data =', crit_data)
 mtx.unlock()

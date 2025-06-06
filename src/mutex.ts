@@ -7,14 +7,12 @@ import { Semaphore } from './semaphore.js'
 export class Mutex {
     protected _sem = new Semaphore(1)
 
-    constructor() {}
-
     /**
      * Get access to the exclusive resource.
      *
      * @returns Promise to get the access the resource (lock).
      */
-    lock(): Promise<void> {
+    async lock(): Promise<void> {
         return this._sem.acquire()
     }
 
