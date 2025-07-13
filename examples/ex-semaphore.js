@@ -1,4 +1,4 @@
-import { Semaphore } from '../dist/index.js'
+import {Semaphore} from '../dist/index.js'
 
 const sem = new Semaphore()
 

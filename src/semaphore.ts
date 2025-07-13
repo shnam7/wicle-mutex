@@ -8,7 +8,6 @@ export class Semaphore {
         this._value = value
     }
 
-
     /**
      * POSIX semaphore interface for sem_wait().
      *
@@ -82,6 +81,6 @@ export class Semaphore {
      * Alias to sem.post().
      */
     release(): void {
-        this.post();
+        this.post()
     }
 }

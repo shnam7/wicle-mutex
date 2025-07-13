@@ -1,4 +1,4 @@
-import { Mutex } from '../dist/index.js'
+import {Mutex} from '../dist/index.js'
 
 const mtx = new Mutex()
 let crit_data = 1

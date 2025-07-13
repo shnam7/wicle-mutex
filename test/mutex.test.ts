@@ -71,7 +71,7 @@ describe.concurrent('Mutex', () => {
         // exchanges messages
         const msg_sent: string[] = []
         for (let n = 0; n < 100; ++n) {
-            msg_sent.push(crypto.randomBytes(4).toString('hex'))
+            msg_sent.push(crypto.randomBytes(4).toString('hex') as string)
         }
 
         const msg_promises: Array<Promise<string>> = []

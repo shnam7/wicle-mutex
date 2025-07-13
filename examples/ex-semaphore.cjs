@@ -1,4 +1,4 @@
-const { Semaphore } = require('../dist/index.cjs')
+const {Semaphore} = require('../dist/index.cjs')
 
 const sem = new Semaphore()
 

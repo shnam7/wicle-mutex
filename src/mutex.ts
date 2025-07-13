@@ -2,7 +2,7 @@
  * ref: https://github.com/pbardov/es6-mutex
  */
 
-import { Semaphore } from './semaphore.js'
+import {Semaphore} from './semaphore.js'
 
 export class Mutex {
     protected _sem = new Semaphore(1)

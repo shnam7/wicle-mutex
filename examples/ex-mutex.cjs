@@ -1,4 +1,4 @@
-const { Mutex } = require('../dist/index.cjs')
+const {Mutex} = require('../dist/index.cjs')
 
 const mtx = new Mutex()
 let crit_data = 1
