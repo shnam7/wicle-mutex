@@ -1,17 +1,19 @@
-// ref: https://github.com/pbardov/es6-mutex
-
 export class Semaphore {
-    protected _waitQ: Array<() => void> = []
-    protected _value = 0 // # of currently allowed accesses
+    private readonly _waitQ: Array<() => void> = []
+    private readonly _maxValue: number
+    private _value: number
 
+    /**
+     * @param value Initial resource count. The default of 0 is the signaling (event) pattern;
+     *              use a positive value for resource-counting.
+     */
     constructor(value = 0) {
+        this._maxValue = value
         this._value = value
     }
 
     /**
-     * POSIX semaphore interface for sem_wait().
-     *
-     * @returns Promise waiting for the semaphore to be signaled.
+     * POSIX sem_wait(). Acquires one resource, waiting if none are available.
      */
     async wait(): Promise<void> {
         if (this._value > 0) {
@@ -20,18 +22,14 @@ export class Semaphore {
         }
 
         return new Promise<void>(resolve => {
-            this._waitQ.push(() => {
-                --this._value
-                resolve()
-            })
+            this._waitQ.push(resolve)
         })
     }
 
     /**
-     * POSIX semaphore interface for sem_trywait().
-     * Check if tghe semaphore is signaled without waiting.
+     * POSIX sem_trywait(). Acquires one resource without waiting.
      *
-     * @returns true if the semaphoire is in signaled state, or false
+     * @returns true if acquired, false if no resource is available.
      */
     tryWait(): boolean {
         if (this._value <= 0) return false
@@ -40,47 +38,90 @@ export class Semaphore {
     }
 
     /**
-     * POSIX semaphore interface for sem_post(). Alias fore release()
+     * Acquires one resource, waiting up to `timeout` ms.
+     *
+     * @param timeout Milliseconds to wait before giving up.
+     * @returns true if acquired, false on timeout.
+     */
+    async waitFor(timeout: number): Promise<boolean> {
+        if (this._value > 0) {
+            --this._value
+            return true
+        }
+
+        return new Promise<boolean>(resolve => {
+            let acquired = false
+            const waiter = () => {
+                acquired = true
+                resolve(true)
+            }
+
+            this._waitQ.push(waiter)
+            setTimeout(() => {
+                if (acquired) return
+                const idx = this._waitQ.indexOf(waiter)
+                if (idx !== -1) this._waitQ.splice(idx, 1)
+                resolve(false)
+            }, timeout)
+        })
+    }
+
+    /**
+     * POSIX sem_post(). Releases one resource, waking the oldest waiter if any.
      */
     post(): void {
-        ++this._value
-        if (this._waitQ.length > 0) {
-            const resolver = this._waitQ.shift()
-            if (resolver) resolver()
+        const next = this._waitQ.shift()
+        if (next) {
+            next()
+        } else {
+            ++this._value
         }
     }
 
     /**
-     * @returns semapohore value, whichi means resouce count currently available or signaled count.
+     * Current resource count — available resources, or pending signals when using the signaling pattern.
      */
     get value(): number {
         return this._value
     }
 
     /**
-     * Aquire semaphore resource. Alias to sem.wait().
-     *
-     * @returns Promise waiting for sempahore resorece allocation.
+     * The initial resource count passed to the constructor.
+     * For the signaling pattern this is 0; for resource counting it is the pool size.
      */
+    get maxValue(): number {
+        return this._maxValue
+    }
+
+    /** Alias for {@link wait}. */
     async acquire(): Promise<void> {
         return this.wait()
     }
 
-    /**
-     * Try aquiring semaphore resource. returns immediately if the access not available.
-     * Alias to sem.tryWait().
-     *
-     * @returns true if the access aquired, or false.
-     */
+    /** Alias for {@link tryWait}. */
     tryAcquire(): boolean {
         return this.tryWait()
     }
 
-    /**
-     * Release semaphore resource.
-     * Alias to sem.post().
-     */
+    /** Alias for {@link waitFor}. */
+    async acquireFor(timeout: number): Promise<boolean> {
+        return this.waitFor(timeout)
+    }
+
+    /** Alias for {@link post}. */
     release(): void {
         this.post()
+    }
+
+    /**
+     * Acquires the semaphore, runs `fn`, then releases — even if `fn` throws.
+     */
+    async withAcquire<T>(fn: () => T | PromiseLike<T>): Promise<T> {
+        await this.wait()
+        try {
+            return await fn()
+        } finally {
+            this.post()
+        }
     }
 }

@@ -1,89 +1,128 @@
-import { describe, expect, it } from 'vitest'
-import { Semaphore } from '../src/index.js'
+import {describe, expect, it} from 'vitest'
+import {Semaphore} from '../src/index.js'
 
-/**
- * Producer-Consumer handshaking
- *
- * @param { max_produce } # of produce actions
- * @param { handshake } # of produce actions
- * @returns Promise for producer/consumer test result (succes or failure)
- */
-export const producer_consumer = async ({ max_produce = 100, handshake = false } = {}): Promise<boolean> => {
-    let consumer_sum = 0
-    let expected_sum = 0
-    let shared_mem = 0
-    const sem_reader = handshake ? new Semaphore(0) : undefined
-    const sem_writer = handshake ? new Semaphore(0) : undefined
+const producerConsumer = async (maxProduce = 100, handshake = false): Promise<boolean> => {
+    let consumerSum = 0
+    let expectedSum = 0
+    let sharedMem = 0
+    const semReader = handshake ? new Semaphore(0) : undefined
+    const semWriter = handshake ? new Semaphore(0) : undefined
 
     const producer = async () => {
-        // console.log('Producer started.')
         let count = 0
-        while (++count <= max_produce) {
-            shared_mem = count
-            expected_sum += count
-            // console.log(`producer count=${count} sent_val=${shared_mem} expected_sum=${expected_sum}`)
-            sem_writer?.post() // signal to reader that write is done
+        while (++count <= maxProduce) {
+            sharedMem = count
+            expectedSum += count
+            semWriter?.post()
             // eslint-disable-next-line no-await-in-loop
-            await sem_reader?.wait() // wait for the reader to process
+            await semReader?.wait()
         }
-        // console.log('Producer finished.')
     }
 
     const consumer = async () => {
-        // console.log('Consumer started.')
         let count = 0
-        while (++count <= max_produce) {
+        while (++count <= maxProduce) {
             // eslint-disable-next-line no-await-in-loop
-            await sem_writer?.wait() // wait for the writer to process
-            consumer_sum += shared_mem
-            // console.log(`consumer count=${count} rcvd_val=${shared_mem} consumer_sum=${consumer_sum}`)
-            sem_reader?.post() // signal to writer that read is done
+            await semWriter?.wait()
+            consumerSum += sharedMem
+            semReader?.post()
         }
-        // console.log('Consumer finished.')
     }
 
     await Promise.all([producer(), consumer()])
-    // console.log(`Finished: consumer_sum=${consumer_sum} expected_sum=${expected_sum}`)
-    return consumer_sum === expected_sum
+    return consumerSum === expectedSum
 }
 
-describe('Semapare Test', () => {
-    describe('tryAquire(): single resource allocation test', () => {
-        const sem = new Semaphore()
-        it('should fail with when no resource is available', () => {
-            expect(sem.tryAcquire()).toBeFalsy()
-        })
-        it('now should succeed when a resource is released.', () => {
+describe('Semaphore', () => {
+    describe('tryAcquire()', () => {
+        it('fails when no resource is available, succeeds after release', () => {
+            const sem = new Semaphore()
+            expect(sem.tryAcquire()).toBe(false)
             sem.release()
-            expect(sem.tryAcquire()).toBeTruthy()
-        })
-        it('expects sepaphore value to be 0.', () => {
+            expect(sem.tryAcquire()).toBe(true)
             expect(sem.value).toBe(0)
         })
     })
 
-    describe('tryWait(): multiple resource allocation test', () => {
-        const MAX_ACCESS = 110
-        const sem = new Semaphore(MAX_ACCESS)
-        it(`should succeed up to ${MAX_ACCESS} times`, () => {
-            for (let i = 0; i < MAX_ACCESS; ++i) expect(sem.tryWait()).toBeTruthy()
+    describe('tryWait()', () => {
+        it('drains all N initial resources then fails, succeeds again after one release', () => {
+            const n = 110
+            const sem = new Semaphore(n)
+            for (let i = 0; i < n; ++i) expect(sem.tryWait()).toBe(true)
             expect(sem.value).toBe(0)
-        })
-        it('now should fail', () => {
-            expect(sem.tryAcquire()).toBeFalsy()
-        })
-        it('After releasing once, should succeed', () => {
+            expect(sem.tryWait()).toBe(false)
             sem.release()
-            expect(sem.tryAcquire()).toBeTruthy()
+            expect(sem.tryWait()).toBe(true)
         })
     })
 
-    describe('Producer/Consumer test', () => {
-        it('should fail w/o handshaking', async () => {
-            expect(await producer_consumer({ handshake: false })).toBeFalsy()
+    describe('waitFor()', () => {
+        it('returns true immediately when a resource is available', async () => {
+            const sem = new Semaphore(1)
+            expect(await sem.waitFor(50)).toBe(true)
+            expect(sem.value).toBe(0)
         })
-        it('should succeed with handsking using semaphore', async () => {
-            expect(await producer_consumer({ handshake: true })).toBeTruthy()
+
+        it('returns false on timeout when no resource is available', async () => {
+            const sem = new Semaphore(0)
+            expect(await sem.waitFor(30)).toBe(false)
+            expect(sem.value).toBe(0)
+        })
+
+        it('acquires when a resource is posted before the timeout', async () => {
+            const sem = new Semaphore(0)
+            setTimeout(() => {
+                sem.post()
+            }, 10)
+            expect(await sem.waitFor(200)).toBe(true)
+        })
+    })
+
+    describe('acquire() and acquireFor()', () => {
+        it('acquire() waits for a resource like wait()', async () => {
+            const sem = new Semaphore(1)
+            await sem.acquire()
+            expect(sem.value).toBe(0)
+        })
+
+        it('acquireFor() times out like waitFor()', async () => {
+            const sem = new Semaphore(0)
+            expect(await sem.acquireFor(30)).toBe(false)
+        })
+    })
+
+    describe('maxValue', () => {
+        it('reflects the initial constructor value', () => {
+            expect(new Semaphore().maxValue).toBe(0)
+            expect(new Semaphore(5).maxValue).toBe(5)
+        })
+
+        it('does not change after post() or wait()', async () => {
+            const sem = new Semaphore(2)
+            await sem.wait()
+            sem.post()
+            sem.post()
+            expect(sem.maxValue).toBe(2)
+        })
+    })
+
+    describe('withAcquire()', () => {
+        it('releases the resource even when the callback throws', async () => {
+            const sem = new Semaphore(1)
+            await expect(sem.withAcquire(() => {
+                throw new Error('fail')
+            })).rejects.toThrow('fail')
+            expect(sem.value).toBe(1)
+        })
+    })
+
+    describe('Producer/Consumer synchronization', () => {
+        it('consumer sum mismatches without handshaking', async () => {
+            expect(await producerConsumer(100, false)).toBe(false)
+        })
+
+        it('consumer sum matches with semaphore handshaking', async () => {
+            expect(await producerConsumer(100, true)).toBe(true)
         })
     })
 })

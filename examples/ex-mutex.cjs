@@ -1,18 +1,17 @@
 const {Mutex} = require('../dist/index.cjs')
 
 const mtx = new Mutex()
-let crit_data = 1
+let critData = 0
 
-console.log('Access crit data #1')
-mtx.lock().then(() => {
-    setTimeout(() => {
-        crit_data = 2
-        mtx.unlock()
-    }, 1000)
-})
+async function main() {
+    await mtx.withLock(async () => {
+        critData = 1
+        console.log('Section 1 — critData set to', critData)
+    })
 
-console.log('Access crit data #2')
-mtx.lock().then(() => {
-    console.log('crit_data =', crit_data)
-    mtx.unlock()
-})
+    await mtx.withLock(async () => {
+        console.log('Section 2 — critData is', critData)  // always 1
+    })
+}
+
+main()

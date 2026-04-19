@@ -1,133 +1,219 @@
 # @wicle/mutex
 
-Simple `Mutex` and `Semaphore` implementation written in TypeScript.
+Async `Mutex` and `Semaphore` for Node.js and browsers, written in TypeScript.
 
-`Semaphore` uses [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) to implement posix semaphore functions, `wait`, `post`, and get `value`.
-
-`Mutex` uses `Semaphore` to implement posix mutex funtions, `lock`, `unlock`, and `tryLock`.
+- Zero dependencies
+- Promise-based, works with `async`/`await`
+- POSIX-style naming (`wait`, `post`, `lock`, `unlock`) with ergonomic aliases (`acquire`, `release`, `withLock`, …)
+- Timeout variants for every blocking operation
 
 ## Installation
 
 ```bash
-# npm
-npm i '@wicle/mutex'
-
-# yarn
-yarn add '@wicle/mutex'
-
-# pnpm
-pnom add '@wicle/mutex'
+npm add @wicle/mutex
+yarn add @wicle/mutex
+pnpm add @wicle/mutex
 ```
 
-## Usage
+## Quick start
 
-### Semaphore
+### Mutex — exclusive access
 
-```ts
-import { Semaphore } from '@wicle/mutex'
-
-const sem = new Semaphore()
-setTimeout(() => { sem.release() }, 1000)
-
-console.time('semaphore wait')
-await sem.wait()
-console.timeEnd('semaphore wait')
-```
-
-#### Mutex
+The safest pattern is `withLock`, which releases the lock automatically even if the callback throws.
 
 ```ts
 import { Mutex } from '@wicle/mutex'
 
 const mtx = new Mutex()
-let crit_data = 1
+let counter = 0
 
-console.log('Access crit data #1')
-await mtx.lock()
-setTimeout(() => { crit_data = 2; mtx.unlock() }, 1000)
+// Launch 100 concurrent "threads" — only one runs inside withLock at a time.
+await Promise.all(
+    Array.from({ length: 100 }, () =>
+        mtx.withLock(async () => {
+            const val = counter
+            await someAsyncWork()
+            counter = val + 1  // safe: no other thread can be here simultaneously
+        })
+    )
+)
+```
 
-console.log('Access crit data #2')
+Manual lock / unlock:
+
+```ts
 await mtx.lock()
-console.log('crit_data = ', crit_data)
-mtx.unlock()
+try {
+    // critical section
+} finally {
+    mtx.unlock()
+}
+```
+
+### Semaphore — resource counting and signaling
+
+**Resource counting** (initial value > 0): limits the number of concurrent operations.
+
+```ts
+import { Semaphore } from '@wicle/mutex'
+
+const sem = new Semaphore(3)  // allow up to 3 concurrent operations
+
+async function fetchWithLimit(url: string) {
+    return sem.withAcquire(async () => {
+        const res = await fetch(url)
+        return res.json()
+    })
+}
+```
+
+**Signaling** (initial value 0): one coroutine waits, another signals.
+
+```ts
+const ready = new Semaphore(0)  // starts blocked
+
+// Consumer waits for the producer to signal.
+async function consumer() {
+    await ready.wait()
+    console.log('producer finished, processing now')
+}
+
+// Producer signals when done.
+async function producer() {
+    await doWork()
+    ready.post()
+}
+
+await Promise.all([consumer(), producer()])
 ```
 
 ## API
 
-### Semaphore
+### `Semaphore`
 
-#### constructor
-const sem = new Semaphore([value])
-Create a new Semaphore instance. value is number of available resources, whcich defaults to 0.
+```ts
+new Semaphore(value?: number)
+```
 
-#### sem.wait()
-POSIX semaphore interface for sem_wait().
-Returns a promise waiting for the semaphore to be signaled (resource available).
-Use await or Proimise.then() to wait for the signal.
+Creates a semaphore with `value` available resources (default `0`). A value of `0` is the signaling pattern — the semaphore starts blocked and a caller must `post()` before `wait()` can proceed. Use a positive value for resource counting.
+
+---
+
+#### `sem.wait()` → `Promise<void>`
+
+Acquires one resource, waiting until one is available. POSIX `sem_wait`.
+
 ```ts
 await sem.wait()
-// your code...
-
-// or
-sem.wait().then(()=>{
-    // your code...
-})
 ```
 
-#### sem.tryWait()
-POSIX semaphore interface for sem_trywait().
-Check if tghe semaphore is signaled without waiting.
-Returns true if the semaphoire is in signaled state, or false
+#### `sem.tryWait()` → `boolean`
 
-#### sem.post()
-POSIX semaphore interface for sem_post(). Alias fore release()
-Returns void
+Acquires one resource without waiting. Returns `true` if acquired, `false` if none are available. POSIX `sem_trywait`.
 
-#### sem.value
-Semapohore value, whichi means resouce count currently available or signaled count.
+#### `sem.waitFor(timeout)` → `Promise<boolean>`
 
-#### sem.aquire()
-Aquire semaphore resource.
-Alias to sem.wait().
-Use await or Proimise.then() to wait for the resource to be aquired.
+Acquires one resource, waiting up to `timeout` milliseconds. Returns `true` if acquired, `false` on timeout.
 
-#### sem.tryAquire()
-Try aquiring semaphore resource. returns immediately if the access not available.
-Alias to sem.tryWait().
-Returns true if the access aquired, or false.
-
-#### sem.release()
-Release semaphore resource.
-Alias to sem.post().
-
-
-### Mutex
-
-#### constructor
-const mtx = new Mutex()
-Create a new Mutex instance.
-
-#### mtx.lock()
-Get access to the exclusive resource.
-Returns Promise to get the access the resource (lock).
-Use await or Proimise.then() to wait for the resource to be available.
 ```ts
-await mtx.lock()
-// your code...
+if (await sem.waitFor(500)) {
+    // acquired within 500 ms
+} else {
+    // timed out
+}
+```
 
-// or
-mtx.lock().then(()=>{
-    // your code...
+#### `sem.post()` → `void`
+
+Releases one resource, waking the oldest waiter if any. POSIX `sem_post`.
+
+#### `sem.value` → `number`
+
+The current resource count — number of available resources, or pending signals in the signaling pattern.
+
+#### `sem.maxValue` → `number`
+
+The initial resource count passed to the constructor. Reflects the pool size for the resource-counting pattern, or `0` for the signaling pattern.
+
+#### `sem.withAcquire(fn)` → `Promise<T>`
+
+Acquires one resource, runs `fn`, then releases it — even if `fn` throws. Recommended over manual `acquire`/`release`.
+
+> Only use `withAcquire` with a positive initial value. With `value = 0` (signaling pattern), `acquire()` will block until someone calls `post()`, and there is no automatic signal to unblock it.
+
+```ts
+const result = await sem.withAcquire(async () => {
+    return doWork()
 })
 ```
 
-#### mtx.tryLock()
-Try to get access to the exclusive resource without waiting.
-Returns true if the aquired, or false.
+---
 
-#### mtx.unlock()
-Unlock the exclusive resource.
+**Aliases** — identical behavior, alternative naming:
 
+| Alias | Equivalent |
+|---|---|
+| `sem.acquire()` | `sem.wait()` |
+| `sem.tryAcquire()` | `sem.tryWait()` |
+| `sem.acquireFor(timeout)` | `sem.waitFor(timeout)` |
+| `sem.release()` | `sem.post()` |
+
+---
+
+### `Mutex`
+
+A binary semaphore with an ownership guard. Equivalent to `new Semaphore(1)` but with additional safety: `unlock()` throws if the mutex is not currently locked.
+
+> Lock ownership is not enforced — any caller can release the lock.
+
+```ts
+new Mutex()
+```
+
+---
+
+#### `mtx.lock()` → `Promise<void>`
+
+Acquires the lock, waiting until it is available.
+
+#### `mtx.tryLock()` → `boolean`
+
+Acquires the lock without waiting. Returns `true` if acquired, `false` if already locked.
+
+#### `mtx.lockFor(timeout)` → `Promise<boolean>`
+
+Acquires the lock, waiting up to `timeout` milliseconds. Returns `true` if acquired, `false` on timeout.
+
+```ts
+if (await mtx.lockFor(500)) {
+    try {
+        // critical section
+    } finally {
+        mtx.unlock()
+    }
+} else {
+    // could not acquire within 500 ms
+}
+```
+
+#### `mtx.unlock()` → `void`
+
+Releases the lock. **Throws** if the mutex is not currently locked — use this to catch double-unlock bugs early.
+
+#### `mtx.locked` → `boolean`
+
+`true` while the mutex is held.
+
+#### `mtx.withLock(fn)` → `Promise<T>`
+
+Acquires the lock, runs `fn`, then releases — even if `fn` throws. Recommended over manual `lock`/`unlock`.
+
+```ts
+const result = await mtx.withLock(async () => {
+    return doExclusiveWork()
+})
+```
 
 ## License
-Copyright© 2024, Under MIT
+
+MIT © 2024 Robin Nam

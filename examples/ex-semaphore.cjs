@@ -1,13 +1,16 @@
 const {Semaphore} = require('../dist/index.cjs')
 
-const sem = new Semaphore()
+const sem = new Semaphore(0)
 
-setTimeout(() => {
-    sem.release()
-}, 1000)
+async function main() {
+    setTimeout(() => {
+        console.log('Posting signal after 1 s')
+        sem.post()
+    }, 1000)
 
-console.time('semaphore wait')
+    console.time('wait')
+    await sem.wait()
+    console.timeEnd('wait')  // ~1000 ms
+}
 
-sem.wait().then(() => {
-    console.timeEnd('semaphore wait')
-})
+main()

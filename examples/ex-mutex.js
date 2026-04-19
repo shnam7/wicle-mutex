@@ -1,16 +1,14 @@
-import {Mutex} from '../dist/index.js'
+import {Mutex} from '../dist/index.mjs'
 
 const mtx = new Mutex()
-let crit_data = 1
+let critData = 0
 
-console.log('Access crit data #1')
-await mtx.lock()
-setTimeout(() => {
-    crit_data = 2
-    mtx.unlock()
-}, 1000)
+// withLock acquires, runs the callback, then releases — even if the callback throws.
+await mtx.withLock(async () => {
+    critData = 1
+    console.log('Section 1 — critData set to', critData)
+})
 
-console.log('Access crit data #2')
-await mtx.lock()
-console.log('crit_data =', crit_data)
-mtx.unlock()
+await mtx.withLock(async () => {
+    console.log('Section 2 — critData is', critData)  // always 1
+})
