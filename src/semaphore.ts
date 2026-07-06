@@ -4,8 +4,10 @@ export class Semaphore {
     private _value: number
 
     /**
+     * Creates a new semaphore with the given initial resource count.
+     *
      * @param value Initial resource count. The default of 0 is the signaling (event) pattern;
-     *              use a positive value for resource-counting.
+     * use a positive value for resource-counting.
      */
     constructor(value = 0) {
         this._maxValue = value
