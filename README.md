@@ -22,31 +22,31 @@ pnpm add @wicle/mutex
 The safest pattern is `withLock`, which releases the lock automatically even if the callback throws.
 
 ```ts
-import { Mutex } from '@wicle/mutex'
+import { Mutex } from "@wicle/mutex";
 
-const mtx = new Mutex()
-let counter = 0
+const mtx = new Mutex();
+let counter = 0;
 
 // Launch 100 concurrent "threads" — only one runs inside withLock at a time.
 await Promise.all(
     Array.from({ length: 100 }, () =>
         mtx.withLock(async () => {
-            const val = counter
-            await someAsyncWork()
-            counter = val + 1  // safe: no other thread can be here simultaneously
-        })
-    )
-)
+            const val = counter;
+            await someAsyncWork();
+            counter = val + 1; // safe: no other thread can be here simultaneously
+        }),
+    ),
+);
 ```
 
 Manual lock / unlock:
 
 ```ts
-await mtx.lock()
+await mtx.lock();
 try {
     // critical section
 } finally {
-    mtx.unlock()
+    mtx.unlock();
 }
 ```
 
@@ -55,36 +55,36 @@ try {
 **Resource counting** (initial value > 0): limits the number of concurrent operations.
 
 ```ts
-import { Semaphore } from '@wicle/mutex'
+import { Semaphore } from "@wicle/mutex";
 
-const sem = new Semaphore(3)  // allow up to 3 concurrent operations
+const sem = new Semaphore(3); // allow up to 3 concurrent operations
 
 async function fetchWithLimit(url: string) {
     return sem.withAcquire(async () => {
-        const res = await fetch(url)
-        return res.json()
-    })
+        const res = await fetch(url);
+        return res.json();
+    });
 }
 ```
 
 **Signaling** (initial value 0): one coroutine waits, another signals.
 
 ```ts
-const ready = new Semaphore(0)  // starts blocked
+const ready = new Semaphore(0); // starts blocked
 
 // Consumer waits for the producer to signal.
 async function consumer() {
-    await ready.wait()
-    console.log('producer finished, processing now')
+    await ready.wait();
+    console.log("producer finished, processing now");
 }
 
 // Producer signals when done.
 async function producer() {
-    await doWork()
-    ready.post()
+    await doWork();
+    ready.post();
 }
 
-await Promise.all([consumer(), producer()])
+await Promise.all([consumer(), producer()]);
 ```
 
 ## API
@@ -104,7 +104,7 @@ Creates a semaphore with `value` available resources (default `0`). A value of `
 Acquires one resource, waiting until one is available. POSIX `sem_wait`.
 
 ```ts
-await sem.wait()
+await sem.wait();
 ```
 
 #### `sem.tryWait()` → `boolean`
@@ -143,20 +143,20 @@ Acquires one resource, runs `fn`, then releases it — even if `fn` throws. Reco
 
 ```ts
 const result = await sem.withAcquire(async () => {
-    return doWork()
-})
+    return doWork();
+});
 ```
 
 ---
 
 **Aliases** — identical behavior, alternative naming:
 
-| Alias | Equivalent |
-|---|---|
-| `sem.acquire()` | `sem.wait()` |
-| `sem.tryAcquire()` | `sem.tryWait()` |
+| Alias                     | Equivalent             |
+| ------------------------- | ---------------------- |
+| `sem.acquire()`           | `sem.wait()`           |
+| `sem.tryAcquire()`        | `sem.tryWait()`        |
 | `sem.acquireFor(timeout)` | `sem.waitFor(timeout)` |
-| `sem.release()` | `sem.post()` |
+| `sem.release()`           | `sem.post()`           |
 
 ---
 
@@ -167,7 +167,7 @@ A binary semaphore with an ownership guard. Equivalent to `new Semaphore(1)` but
 > Lock ownership is not enforced — any caller can release the lock.
 
 ```ts
-new Mutex()
+new Mutex();
 ```
 
 ---
@@ -189,7 +189,7 @@ if (await mtx.lockFor(500)) {
     try {
         // critical section
     } finally {
-        mtx.unlock()
+        mtx.unlock();
     }
 } else {
     // could not acquire within 500 ms
@@ -210,8 +210,8 @@ Acquires the lock, runs `fn`, then releases — even if `fn` throws. Recommended
 
 ```ts
 const result = await mtx.withLock(async () => {
-    return doExclusiveWork()
-})
+    return doExclusiveWork();
+});
 ```
 
 ## License
