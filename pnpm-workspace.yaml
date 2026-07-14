@@ -1,7 +1,0 @@
-allowBuilds:
-  core-js: false
-  esbuild: false
-  unrs-resolver: false
-onlyBuiltDependencies:
-  - esbuild
-  - unrs-resolver

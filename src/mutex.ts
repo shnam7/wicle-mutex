@@ -1,4 +1,4 @@
-import { Semaphore } from "./semaphore.js";
+import { Semaphore } from "./semaphore.ts";
 
 export class Mutex {
   private readonly _sem = new Semaphore(1);
