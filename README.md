@@ -2,10 +2,10 @@
 
 Async `Mutex` and `Semaphore` for Node.js and browsers, written in TypeScript.
 
-- Zero dependencies
-- Promise-based, works with `async`/`await`
-- POSIX-style naming (`wait`, `post`, `lock`, `unlock`) with ergonomic aliases (`acquire`, `release`, `withLock`, …)
-- Timeout variants for every blocking operation
+-   Zero dependencies
+-   Promise-based, works with `async`/`await`
+-   POSIX-style naming (`wait`, `post`, `lock`, `unlock`) with ergonomic aliases (`acquire`, `release`, `withLock`, …)
+-   Timeout variants for every blocking operation
 
 ## Installation
 
@@ -34,8 +34,8 @@ await Promise.all(
             const val = counter;
             await someAsyncWork();
             counter = val + 1; // safe: no other thread can be here simultaneously
-        }),
-    ),
+        })
+    )
 );
 ```
 
