@@ -10,6 +10,10 @@ export class Semaphore {
    * use a positive value for resource-counting.
    */
   constructor(value = 0) {
+    if (!Number.isInteger(value) || value < 0) {
+      throw new RangeError("Semaphore value must be a non-negative integer");
+    }
+
     this._maxValue = value;
     this._value = value;
   }
@@ -46,24 +50,35 @@ export class Semaphore {
    * @returns true if acquired, false on timeout.
    */
   async waitFor(timeout: number): Promise<boolean> {
+    if (!Number.isFinite(timeout) || timeout < 0) {
+      throw new RangeError("Timeout must be a finite number greater than or equal to 0");
+    }
+
     if (this._value > 0) {
       --this._value;
       return true;
     }
 
     return new Promise<boolean>((resolve) => {
-      let acquired = false;
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (result: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(result);
+      };
+
       const waiter = () => {
-        acquired = true;
-        resolve(true);
+        finish(true);
       };
 
       this._waitQ.push(waiter);
-      setTimeout(() => {
-        if (acquired) return;
+      timer = setTimeout(() => {
         const idx = this._waitQ.indexOf(waiter);
         if (idx !== -1) this._waitQ.splice(idx, 1);
-        resolve(false);
+        finish(false);
       }, timeout);
     });
   }

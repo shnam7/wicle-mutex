@@ -69,12 +69,50 @@ describe("Semaphore", () => {
       expect(sem.value).toBe(0);
     });
 
+    it("returns false immediately when timeout is zero and no resource is available", async () => {
+      const sem = new Semaphore(0);
+      expect(await sem.waitFor(0)).toBe(false);
+      expect(sem.value).toBe(0);
+    });
+
+    it("rejects negative and non-finite timeouts", async () => {
+      const sem = new Semaphore(0);
+      await expect(sem.waitFor(-1)).rejects.toThrow(RangeError);
+      await expect(sem.waitFor(Number.NaN)).rejects.toThrow(RangeError);
+      await expect(sem.waitFor(Number.POSITIVE_INFINITY)).rejects.toThrow(RangeError);
+    });
+
     it("acquires when a resource is posted before the timeout", async () => {
       const sem = new Semaphore(0);
       setTimeout(() => {
         sem.post();
       }, 10);
       expect(await sem.waitFor(200)).toBe(true);
+    });
+  });
+
+  describe("constructor validation", () => {
+    it("rejects negative and non-integer initial resource counts", () => {
+      expect(() => new Semaphore(-1)).toThrow(RangeError);
+      expect(() => new Semaphore(1.5)).toThrow(RangeError);
+      expect(() => new Semaphore(Number.NaN)).toThrow(RangeError);
+    });
+  });
+
+  describe("waiter ordering", () => {
+    it("wakes pending waiters in FIFO order", async () => {
+      const sem = new Semaphore(0);
+      const order: number[] = [];
+
+      const p1 = sem.waitFor(50).then(() => order.push(1));
+      const p2 = sem.waitFor(50).then(() => order.push(2));
+
+      await Promise.resolve();
+      sem.post();
+      sem.post();
+
+      await Promise.all([p1, p2]);
+      expect(order).toEqual([1, 2]);
     });
   });
 

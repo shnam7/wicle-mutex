@@ -1,32 +1,7 @@
 {
   "name": "@wicle/mutex",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Async mutex and semaphore implementation for Node.js and browsers.",
-  "keywords": [
-    "mutex",
-    "semaphore",
-    "async",
-    "promise",
-    "await",
-    "posix",
-    "lock",
-    "unlock",
-    "post",
-    "wait"
-  ],
-  "homepage": "https://github.com/shnam7/wicle-mutex#readme",
-  "bugs": {
-    "url": "https://github.com/shnam7/wicle-mutex/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/shnam7/wicle-mutex"
-  },
-  "license": "MIT",
-  "author": {
-    "name": "Robin Nam",
-    "email": "shnam7@gmail.com"
-  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -56,8 +31,7 @@
     "node": ">=18"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "scripts": {
     "dev": "bun run build --watch",
@@ -72,17 +46,42 @@
     "prepare-to-commit": "bun run --sequential rebuild lint test clean",
     "npm-dry-run": "npm publish --dry-run"
   },
-  "devDependencies": {
-    "@biomejs/biome": "^2.5.4",
-    "@changesets/cli": "^2.31.1",
-    "@types/bun": "^1.3.14",
-    "@types/node": "^26.1.1",
-    "@vitest/coverage-v8": "^4.1.10",
-    "bun-plugin-dtsx": "^0.11.1",
-    "rimraf": "^6.1.3",
-    "tsdown": "^0.22.11",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+  "keywords": [
+    "mutex",
+    "semaphore",
+    "async",
+    "promise",
+    "await",
+    "posix",
+    "lock",
+    "unlock",
+    "post",
+    "wait"
+  ],
+  "homepage": "https://github.com/shnam7/wicle-mutex#readme",
+  "bugs": {
+    "url": "https://github.com/shnam7/wicle-mutex/issues"
   },
-  "packageManager": "bun@1.3.14"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shnam7/wicle-mutex"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Robin Nam",
+    "email": "shnam7@gmail.com"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@changesets/cli": "^3.0.3",
+    "@types/bun": "^1.4.2",
+    "@types/node": "^26.6.1",
+    "@vitest/coverage-v8": "^5.0.1",
+    "bun-plugin-dtsx": "^0.11.12",
+    "rimraf": "^6.1.3",
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  },
+  "packageManager": "bun@1.4.2"
 }

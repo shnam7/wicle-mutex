@@ -1,5 +1,11 @@
 # @wicle/mutex
 
+## 0.10.1
+
+### Patch Changes
+
+- Harden Semaphore validation and timeout cleanup.
+
 ## 0.10.0
 
 ### New

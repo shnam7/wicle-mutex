@@ -115,6 +115,8 @@ Acquires one resource without waiting. Returns `true` if acquired, `false` if no
 
 Acquires one resource, waiting up to `timeout` milliseconds. Returns `true` if acquired, `false` on timeout.
 
+`value` must be a non-negative integer, and `timeout` must be a finite number greater than or equal to `0`.
+
 ```ts
 if (await sem.waitFor(500)) {
     // acquired within 500 ms
@@ -164,7 +166,7 @@ const result = await sem.withAcquire(async () => {
 
 A binary semaphore with an ownership guard. Equivalent to `new Semaphore(1)` but with additional safety: `unlock()` throws if the mutex is not currently locked.
 
-> Lock ownership is not enforced — any caller can release the lock.
+> Lock ownership is not enforced — any caller can release the lock. This is intentionally lightweight and is not a re-entrant or owner-tracking mutex.
 
 ```ts
 new Mutex();
