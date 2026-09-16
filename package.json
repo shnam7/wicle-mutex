@@ -1,6 +1,6 @@
 {
   "name": "@wicle/mutex",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Async mutex and semaphore implementation for Node.js and browsers.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -44,6 +44,7 @@
     "clean": "rimraf ./dist ./coverage",
     "rebuild": "bun run --sequential clean build",
     "prepare-to-commit": "bun run --sequential rebuild lint test clean",
+    "prepublishOnly": "bun run build",
     "npm-dry-run": "npm publish --dry-run"
   },
   "keywords": [

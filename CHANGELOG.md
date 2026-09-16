@@ -1,5 +1,11 @@
 # @wicle/mutex
 
+## 0.10.2
+
+### Patch Changes
+
+- fix: missing output files in the released package.
+
 ## 0.10.1
 
 ### Patch Changes
